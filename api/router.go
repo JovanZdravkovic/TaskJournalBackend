@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/JovanZdravkovic/TaskJournalBackend/api/handlers"
+	"github.com/JovanZdravkovic/TaskJournalBackend/db"
 )
 
 type Router struct {
@@ -18,12 +19,12 @@ func NewRouter(address string) *Router {
 	}
 }
 
-func (r *Router) ConfigureRoutes() {
+func (r *Router) ConfigureRoutes(dbService *db.DatabaseService) {
 	r.mux.Handle("/", &handlers.HomeHandler{})
-	r.mux.Handle("/task", &handlers.TaskHandler{})
-	r.mux.Handle("/task/", &handlers.TaskHandler{})
-	r.mux.Handle("/tasks", &handlers.TaskHandler{})
-	r.mux.Handle("/tasks/", &handlers.TaskHandler{})
+	r.mux.Handle("/task", &handlers.TaskHandler{DBService: dbService})
+	r.mux.Handle("/task/", &handlers.TaskHandler{DBService: dbService})
+	r.mux.Handle("/tasks", &handlers.TaskHandler{DBService: dbService})
+	r.mux.Handle("/tasks/", &handlers.TaskHandler{DBService: dbService})
 	r.mux.Handle("/task_history", &handlers.TaskHistoryHandler{})
 	r.mux.Handle("/task_history/", &handlers.TaskHistoryHandler{})
 	r.mux.Handle("/user", &handlers.UserHandler{})
