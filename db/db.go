@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"log"
+	"errors"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -17,19 +17,30 @@ func NewDatabaseService(dbPool *pgxpool.Pool) *DatabaseService {
 	}
 }
 
-func (dbService *DatabaseService) GetTasks() {
-	rows, err := dbService.pool.Query(context.Background(), "SELECT * FROM TASK")
+func (dbService *DatabaseService) GetTasks() ([]TaskDB, error) {
+	rows, err := dbService.pool.Query(context.Background(), "SELECT t.* FROM task t")
 	if err != nil {
-		log.Fatal("Error while getting tasks from database")
+		return nil, errors.New("error while getting tasks from database")
 	} else {
+		var tasks []TaskDB
 		for rows.Next() {
-			values, err := rows.Values()
+			var task TaskDB
+			err := rows.Scan(
+				&task.Id,
+				&task.TaskName,
+				&task.TaskIcon,
+				&task.TaskDesc,
+				&task.Deadline,
+				&task.Starred,
+				&task.Exec_status,
+				&task.Created_at,
+				&task.Created_by,
+			)
 			if err != nil {
-				log.Fatal("Error while iterating dataset")
+				return nil, errors.New("error while iterating dataset")
 			}
-
-			task_icon := values[2].(string)
-			log.Println("task_icon: ", task_icon)
+			tasks = append(tasks, task)
 		}
+		return tasks, nil
 	}
 }
