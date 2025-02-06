@@ -41,3 +41,8 @@ type AuthDB struct {
 	UserId    uuid.UUID `json:"userId"`
 	ExpiresAt time.Time `json:"expiresAt"`
 }
+
+type Credentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
