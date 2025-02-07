@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -111,45 +112,40 @@ func (dbService *DatabaseService) GetTask(taskId uuid.UUID, userId uuid.UUID) (*
 // AUTHENTICATION AND AUTHORIZATION
 
 func (dbService *DatabaseService) GetLoggedInUser(tokenId uuid.UUID) (*uuid.UUID, error) {
-	row := dbService.pool.QueryRow(context.Background(), "SELECT u.id FROM \"user\" u JOIN user_auth ua ON u.id = ua.user_id WHERE ua.id = $1 AND ua.expires_at > CURRENT_TIMESTAMP", tokenId)
-	if row == nil {
-		return nil, errors.New("invalid token")
-	}
 	var userId uuid.UUID
-	err := row.Scan(&userId)
+	err := dbService.pool.QueryRow(context.Background(), "SELECT u.id FROM \"user\" u JOIN user_auth ua ON u.id = ua.user_id WHERE ua.id = $1 AND ua.expires_at > CURRENT_TIMESTAMP", tokenId).Scan(&userId)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("invalid token")
+		}
+		return nil, errors.New("unexpected error")
 	}
 	return &userId, nil
 }
 
 func (dbService *DatabaseService) CreateToken(credentials Credentials) (*AuthDB, error) {
-	// TODO: this function creates a token for given credentials if they are valid, since multiple commands will be executed use transactions
-	tx, err := dbService.pool.Begin(context.Background())
+	tx, err := dbService.pool.BeginTx(context.Background(), pgx.TxOptions{IsoLevel: pgx.Serializable})
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback(context.Background())
 
-	row := tx.QueryRow(context.Background(), "SELECT u.id FROM \"user\" u WHERE u.username = $1 and u.password = $2", credentials.Username, credentials.Password)
-	if row == nil {
-		return nil, errors.New("invalid credentials")
-	}
-
 	var userId uuid.UUID
-	err = row.Scan(&userId)
+	err = tx.QueryRow(context.Background(), "SELECT u.id FROM \"user\" u WHERE u.username = $1 and u.password = $2", credentials.Username, credentials.Password).Scan(&userId)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("invalid credentials")
+		}
+		return nil, errors.New("unexpected error")
 	}
 
-	row = dbService.pool.QueryRow(context.Background(), "INSERT INTO user_auth(user_id, expires_at) VALUES ($1, $2) RETURNING *", userId, time.Now().Add(7*24*time.Hour))
-	if row == nil {
-		return nil, errors.New("failed creating token")
-	}
 	var authRow AuthDB
-	err = row.Scan(&authRow.Id, &authRow.UserId, &authRow.ExpiresAt)
+	err = tx.QueryRow(context.Background(), "INSERT INTO user_auth(user_id, expires_at) VALUES ($1, $2) RETURNING *", userId, time.Now().Add(7*24*time.Hour)).Scan(&authRow.Id, &authRow.UserId, &authRow.ExpiresAt)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("error creating the token")
+		}
+		return nil, errors.New("unexpected error")
 	}
 
 	err = tx.Commit(context.Background())

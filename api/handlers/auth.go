@@ -55,6 +55,7 @@ func (a *AuthHandler) login(w http.ResponseWriter, r *http.Request) {
 		Secure:   true}
 	http.SetCookie(w, &cookie)
 }
+
 func (a *AuthHandler) logout(w http.ResponseWriter, r *http.Request) {
 	tokenCookie, err := r.Cookie("sessiontoken")
 	if err != nil {
