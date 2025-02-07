@@ -20,17 +20,22 @@ func NewRouter(address string) *Router {
 }
 
 func (r *Router) ConfigureRoutes(dbService *db.DatabaseService) {
-	r.mux.Handle("/", &handlers.HomeHandler{})
-	r.mux.Handle("/task", &handlers.TaskHandler{DBService: dbService})
-	r.mux.Handle("/task/", &handlers.TaskHandler{DBService: dbService})
-	r.mux.Handle("/tasks", &handlers.TaskHandler{DBService: dbService})
-	r.mux.Handle("/tasks/", &handlers.TaskHandler{DBService: dbService})
-	r.mux.Handle("/task_history", &handlers.TaskHistoryHandler{DBService: dbService})
-	r.mux.Handle("/task_history/", &handlers.TaskHistoryHandler{DBService: dbService})
-	r.mux.Handle("/user", &handlers.UserHandler{DBService: dbService})
-	r.mux.Handle("/user/", &handlers.UserHandler{DBService: dbService})
-	r.mux.Handle("/auth", &handlers.AuthHandler{DBService: dbService})
-	r.mux.Handle("/auth/", &handlers.AuthHandler{DBService: dbService})
+	homeHandler := handlers.HomeHandler{}
+	authHandler := handlers.AuthHandler{DBService: dbService}
+	taskHandler := handlers.TaskHandler{DBService: dbService, AuthService: &authHandler}
+	taskHistoryHandler := handlers.TaskHistoryHandler{DBService: dbService}
+	userHandler := handlers.UserHandler{DBService: dbService}
+	r.mux.Handle("/", &homeHandler)
+	r.mux.Handle("/task", &taskHandler)
+	r.mux.Handle("/task/", &taskHandler)
+	r.mux.Handle("/tasks", &taskHandler)
+	r.mux.Handle("/tasks/", &taskHandler)
+	r.mux.Handle("/task_history", &taskHistoryHandler)
+	r.mux.Handle("/task_history/", &taskHistoryHandler)
+	r.mux.Handle("/user", &userHandler)
+	r.mux.Handle("/user/", &userHandler)
+	r.mux.Handle("/auth", &authHandler)
+	r.mux.Handle("/auth/", &authHandler)
 }
 
 func (r *Router) ListenAndServe() {

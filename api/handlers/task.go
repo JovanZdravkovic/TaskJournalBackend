@@ -17,27 +17,15 @@ var (
 )
 
 type TaskHandler struct {
-	DBService *db.DatabaseService
+	DBService   *db.DatabaseService
+	AuthService *AuthHandler
 }
 
 func (t *TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	tokenCookie, err := r.Cookie("sessiontoken")
+	userId, err := t.AuthService.GetUser(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Failed to read authentication token"))
-		return
-	}
-	tokenString := tokenCookie.Value
-	token, err := uuid.Parse(tokenString)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Failed to read authentication token"))
-		return
-	}
-	userId, err := t.DBService.GetLoggedInUser(token)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Invalid token"))
+		w.Write([]byte(err.Error()))
 		return
 	}
 
@@ -105,19 +93,19 @@ func (t *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request, userId uui
 	taskId, err := uuid.Parse(path.Base(r.URL.Path))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Error proccessing the uuid"))
+		w.Write([]byte("error proccessing the uuid"))
 		return
 	}
 	task, err := t.DBService.GetTask(taskId, userId)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("The task with given id doesn't exist"))
+		w.Write([]byte("task with given id doesn't exist"))
 		return
 	}
 	taskJson, err := json.Marshal(task)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("An internal server error occured"))
+		w.Write([]byte("internal server error occured"))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

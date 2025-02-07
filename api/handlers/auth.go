@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"regexp"
 
@@ -31,12 +32,37 @@ func (a *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func GetToken(r *http.Request) (*uuid.UUID, error) {
+	tokenCookie, err := r.Cookie("sessiontoken")
+	if err != nil {
+		return nil, errors.New("failed to read authentication token")
+	}
+	tokenString := tokenCookie.Value
+	token, err := uuid.Parse(tokenString)
+	if err != nil {
+		return nil, errors.New("failed to read authentication token")
+	}
+	return &token, nil
+}
+
+func (a *AuthHandler) GetUser(r *http.Request) (*uuid.UUID, error) {
+	token, err := GetToken(r)
+	if err != nil {
+		return nil, err
+	}
+	userId, err := a.DBService.GetLoggedInUser(*token)
+	if err != nil {
+		return nil, err
+	}
+	return userId, nil
+}
+
 func (a *AuthHandler) login(w http.ResponseWriter, r *http.Request) {
 	var credentials db.Credentials
 	err := json.NewDecoder(r.Body).Decode(&credentials)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad request"))
+		w.Write([]byte("bad request"))
 		return
 	}
 	authRow, err := a.DBService.CreateToken(credentials)
@@ -57,18 +83,10 @@ func (a *AuthHandler) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthHandler) logout(w http.ResponseWriter, r *http.Request) {
-	tokenCookie, err := r.Cookie("sessiontoken")
+	token, err := GetToken(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Failed to read authentication token"))
-		return
+		w.Write([]byte(err.Error()))
 	}
-	tokenString := tokenCookie.Name
-	token, err := uuid.Parse(tokenString)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Failed to read authentication token"))
-		return
-	}
-	a.DBService.InvalidateToken(token)
+	a.DBService.InvalidateToken(*token)
 }
