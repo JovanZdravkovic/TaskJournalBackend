@@ -20,6 +20,10 @@ var (
 )
 
 func (a *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	preflight := EnableCORS(w, r)
+	if preflight {
+		return
+	}
 	switch {
 	case r.Method == http.MethodPost && login.MatchString(r.URL.Path):
 		a.login(w, r)

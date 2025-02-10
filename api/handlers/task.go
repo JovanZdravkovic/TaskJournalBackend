@@ -22,6 +22,11 @@ type TaskHandler struct {
 }
 
 func (t *TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	preflight := EnableCORS(w, r)
+	if preflight {
+		return
+	}
+
 	userId, err := t.AuthService.GetUser(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)

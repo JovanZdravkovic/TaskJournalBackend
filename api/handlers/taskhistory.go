@@ -11,5 +11,9 @@ type TaskHistoryHandler struct {
 }
 
 func (th *TaskHistoryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	preflight := EnableCORS(w, r)
+	if preflight {
+		return
+	}
 	w.Write([]byte("This is task history endpoint"))
 }

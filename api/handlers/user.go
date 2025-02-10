@@ -11,5 +11,9 @@ type UserHandler struct {
 }
 
 func (u *UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	preflight := EnableCORS(w, r)
+	if preflight {
+		return
+	}
 	w.Write([]byte("This is users endpoint"))
 }
