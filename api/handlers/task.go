@@ -38,14 +38,14 @@ func (t *TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodGet && TaskID.MatchString(r.URL.Path):
 		t.GetTask(w, r, *userId)
 		return
-	case r.Method == http.MethodPost && TaskID.MatchString(r.URL.Path):
-		t.CreateTask(w, r)
-		return
 	case r.Method == http.MethodPut && TaskID.MatchString(r.URL.Path):
 		t.UpdateTask(w, r)
 		return
 	case r.Method == http.MethodDelete && TaskID.MatchString(r.URL.Path):
 		t.DeleteTask(w, r)
+		return
+	case r.Method == http.MethodPost && Tasks.MatchString(r.URL.Path):
+		t.CreateTask(w, r, *userId)
 		return
 	case r.Method == http.MethodGet && Tasks.MatchString(r.URL.Path):
 		t.GetTasks(w, r, *userId)
@@ -118,9 +118,30 @@ func (t *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request, userId uui
 	w.Write(taskJson)
 }
 
-func (t *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
+func (t *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
+	var task db.TaskPost
+	err := json.NewDecoder(r.Body).Decode(&task)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("bad request"))
+		return
+	}
+	task.CreatedBy = userId
+	taskId, err := t.DBService.CreateTask(task)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	taskIdJson, err := json.Marshal(db.Id{Id: *taskId})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("error while constructing json"))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("This is create single task endpoint"))
+	w.Write(taskIdJson)
 }
 
 func (t *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {

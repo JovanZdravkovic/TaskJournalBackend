@@ -46,3 +46,17 @@ type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
+
+type TaskPost struct {
+	TaskName   string     `json:"taskName"`
+	TaskIcon   string     `json:"taskIcon"`
+	TaskDesc   string     `json:"taskDesc"`
+	Deadline   *time.Time `json:"deadline"`
+	Starred    bool       `json:"starred"`
+	ExecStatus string     `json:"execStatus"`
+	CreatedBy  uuid.UUID  `json:"createdBy"`
+}
+
+type Id struct {
+	Id uuid.UUID `json:"id"`
+}

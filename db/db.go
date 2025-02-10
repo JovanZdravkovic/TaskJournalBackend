@@ -102,7 +102,24 @@ func (dbService *DatabaseService) GetTask(taskId uuid.UUID, userId uuid.UUID) (*
 	return &task, nil
 }
 
-// func (dbService *DatabaseService) CreateTask(task TaskDB) (uuid.UUID, error) {}
+func (dbService *DatabaseService) CreateTask(task TaskPost) (*uuid.UUID, error) {
+	var taskId uuid.UUID
+	err := dbService.pool.QueryRow(
+		context.Background(),
+		"INSERT INTO task(task_name, task_icon, task_desc, deadline, starred, exec_status, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+		task.TaskName,
+		task.TaskIcon,
+		task.TaskDesc,
+		task.Deadline,
+		task.Starred,
+		task.ExecStatus,
+		task.CreatedBy,
+	).Scan(&taskId)
+	if err != nil {
+		return nil, errors.New("error while creating task")
+	}
+	return &taskId, nil
+}
 
 // // TODO: Updating a single task will have multiple functions for different kinds of updates
 // func (dbService *DatabaseService) PutTask() (string, error) {}
