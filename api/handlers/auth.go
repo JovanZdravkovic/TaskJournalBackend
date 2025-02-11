@@ -15,8 +15,9 @@ type AuthHandler struct {
 }
 
 var (
-	login  = regexp.MustCompile(`^/auth/login/*$`)
-	logout = regexp.MustCompile(`^/auth/logout/*$`)
+	authenticate = regexp.MustCompile(`^/auth/authenticate/*$`)
+	login        = regexp.MustCompile(`^/auth/login/*$`)
+	logout       = regexp.MustCompile(`^/auth/logout/*$`)
 )
 
 func (a *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -25,11 +26,14 @@ func (a *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
+	case r.Method == http.MethodPost && authenticate.MatchString(r.URL.Path):
+		a.Authenticate(w, r)
+		return
 	case r.Method == http.MethodPost && login.MatchString(r.URL.Path):
-		a.login(w, r)
+		a.Login(w, r)
 		return
 	case r.Method == http.MethodPost && logout.MatchString(r.URL.Path):
-		a.logout(w, r)
+		a.Logout(w, r)
 		return
 	default:
 		return
@@ -61,7 +65,23 @@ func (a *AuthHandler) GetUser(r *http.Request) (*uuid.UUID, error) {
 	return userId, nil
 }
 
-func (a *AuthHandler) login(w http.ResponseWriter, r *http.Request) {
+func (a *AuthHandler) Authenticate(w http.ResponseWriter, r *http.Request) {
+	user, err := a.GetUser(r)
+	if err != nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	userJson, err := json.Marshal(db.Id{Id: *user})
+	if err != nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(userJson)
+}
+
+func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var credentials db.Credentials
 	err := json.NewDecoder(r.Body).Decode(&credentials)
 	if err != nil {
@@ -84,13 +104,15 @@ func (a *AuthHandler) login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 		Secure:   true}
 	http.SetCookie(w, &cookie)
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func (a *AuthHandler) logout(w http.ResponseWriter, r *http.Request) {
+func (a *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	token, err := GetToken(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte(err.Error()))
 	}
 	a.DBService.InvalidateToken(*token)
+	w.WriteHeader(http.StatusNoContent)
 }
