@@ -24,7 +24,7 @@ func NewDatabaseService(dbPool *pgxpool.Pool) *DatabaseService {
 // TASKS
 
 func (dbService *DatabaseService) GetTasks(userId uuid.UUID) ([]TaskDB, error) {
-	rows, err := dbService.pool.Query(context.Background(), "SELECT t.* FROM task t WHERE t.starred = false AND t.created_by = $1", userId)
+	rows, err := dbService.pool.Query(context.Background(), "SELECT t.* FROM task t WHERE t.created_by = $1", userId)
 	if err != nil {
 		return nil, errors.New("error while getting tasks from database")
 	} else {
