@@ -89,12 +89,14 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("bad request"))
 		return
 	}
+
 	authRow, err := a.DBService.CreateToken(credentials)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte(err.Error()))
 		return
 	}
+
 	cookie := http.Cookie{
 		Name:     "sessiontoken",
 		Value:    authRow.Id.String(),

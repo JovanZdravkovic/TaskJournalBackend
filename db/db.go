@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type DatabaseService struct {
@@ -19,6 +20,16 @@ func NewDatabaseService(dbPool *pgxpool.Pool) *DatabaseService {
 	return &DatabaseService{
 		pool: dbPool,
 	}
+}
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+func MatchPassword(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }
 
 // TASKS
@@ -126,7 +137,7 @@ func (dbService *DatabaseService) CreateTask(task TaskPost) (*uuid.UUID, error) 
 
 // func (dbService *DatabaseService) DeleteTask() (string, error) {}
 
-// AUTHENTICATION AND AUTHORIZATION
+// AUTH
 
 func (dbService *DatabaseService) GetLoggedInUser(tokenId uuid.UUID) (*uuid.UUID, error) {
 	var userId uuid.UUID
@@ -148,12 +159,18 @@ func (dbService *DatabaseService) CreateToken(credentials Credentials) (*AuthDB,
 	defer tx.Rollback(context.Background())
 
 	var userId uuid.UUID
-	err = tx.QueryRow(context.Background(), "SELECT u.id FROM \"user\" u WHERE u.username = $1 and u.password = $2", credentials.Username, credentials.Password).Scan(&userId)
+	var passwordHash string
+	err = tx.QueryRow(context.Background(), "SELECT u.id, u.password FROM \"user\" u WHERE u.username = $1", credentials.Username).Scan(&userId, &passwordHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errors.New("invalid credentials")
+			return nil, errors.New("user doesn't exist")
 		}
 		return nil, errors.New("unexpected error")
+	}
+
+	passwordCheck := MatchPassword(credentials.Password, passwordHash)
+	if !passwordCheck {
+		return nil, errors.New("invalid credentials")
 	}
 
 	var authRow AuthDB
@@ -179,4 +196,62 @@ func (dbService *DatabaseService) InvalidateToken(tokenId uuid.UUID) {
 		log.Printf("Error while deleting tag")
 	}
 	log.Printf("%v", cmdTag)
+}
+
+// USERS
+
+func (dbService *DatabaseService) GetUserInfo(userId uuid.UUID) (*UserGet, error) {
+	var user UserGet
+	err := dbService.pool.QueryRow(context.Background(), "SELECT u.username, u.email. u.created_at FROM \"user\" u WHERE u.id = $1", userId).Scan(
+		&user.Username,
+		&user.Email,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("user doesn't exist")
+		}
+		return nil, errors.New("unexpected error")
+	}
+	return &user, nil
+}
+
+func (dbService *DatabaseService) CreateUser(user UserPost) (*uuid.UUID, error) {
+	tx, err := dbService.pool.BeginTx(context.Background(), pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(context.Background())
+
+	var cnt int
+	err = tx.QueryRow(context.Background(), "SELECT COUNT(*) FROM \"user\" u WHERE u.username = $1", user.Username).Scan(&cnt)
+	if err != nil {
+		return nil, errors.New("unexpected error")
+	}
+	if cnt > 0 {
+		return nil, errors.New("username taken")
+	}
+
+	user.Password, err = HashPassword(user.Password)
+	if err != nil {
+		return nil, errors.New("error hashing password")
+	}
+
+	var userId uuid.UUID
+	err = tx.QueryRow(
+		context.Background(),
+		"INSERT INTO \"user\"(username, email, password) VALUES ($1, $2, $3) RETURNING id",
+		user.Username,
+		user.Email,
+		user.Password,
+	).Scan(&userId)
+	if err != nil {
+		return nil, errors.New("error creating user")
+	}
+
+	err = tx.Commit(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return &userId, nil
 }

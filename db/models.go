@@ -47,6 +47,18 @@ type Credentials struct {
 	Password string `json:"password"`
 }
 
+type UserPost struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type UserGet struct {
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 type TaskPost struct {
 	TaskName   string     `json:"taskName"`
 	TaskIcon   string     `json:"taskIcon"`

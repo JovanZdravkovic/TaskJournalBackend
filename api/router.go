@@ -24,7 +24,7 @@ func (r *Router) ConfigureRoutes(dbService *db.DatabaseService) {
 	authHandler := handlers.AuthHandler{DBService: dbService}
 	taskHandler := handlers.TaskHandler{DBService: dbService, AuthService: &authHandler}
 	taskHistoryHandler := handlers.TaskHistoryHandler{DBService: dbService}
-	userHandler := handlers.UserHandler{DBService: dbService}
+	userHandler := handlers.UserHandler{DBService: dbService, AuthService: &authHandler}
 	r.mux.Handle("/", &homeHandler)
 	r.mux.Handle("/task", &taskHandler)
 	r.mux.Handle("/task/", &taskHandler)
