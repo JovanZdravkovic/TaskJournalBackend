@@ -62,34 +62,6 @@ func (dbService *DatabaseService) GetTasks(userId uuid.UUID) ([]TaskDB, error) {
 	}
 }
 
-func (dbService *DatabaseService) GetStarredTasks(userId uuid.UUID) ([]TaskDB, error) {
-	rows, err := dbService.pool.Query(context.Background(), "SELECT t.* FROM task t WHERE t.starred = true AND t.created_by = $1", userId)
-	if err != nil {
-		return nil, errors.New("error while getting tasks from database")
-	} else {
-		var tasks []TaskDB
-		for rows.Next() {
-			var task TaskDB
-			err := rows.Scan(
-				&task.Id,
-				&task.TaskName,
-				&task.TaskIcon,
-				&task.TaskDesc,
-				&task.Deadline,
-				&task.Starred,
-				&task.Exec_status,
-				&task.Created_at,
-				&task.Created_by,
-			)
-			if err != nil {
-				return nil, errors.New("error while iterating dataset")
-			}
-			tasks = append(tasks, task)
-		}
-		return tasks, nil
-	}
-}
-
 func (dbService *DatabaseService) GetTask(taskId uuid.UUID, userId uuid.UUID) (*TaskDB, error) {
 	row := dbService.pool.QueryRow(context.Background(), "SELECT t.* FROM task t WHERE t.id = $1 AND t.created_by = $2", taskId, userId)
 	if row == nil {

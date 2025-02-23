@@ -11,9 +11,8 @@ import (
 )
 
 var (
-	TaskID       = regexp.MustCompile(`^/task/([a-fA-F0-9\-]{36})$`)
-	Tasks        = regexp.MustCompile(`^/tasks/*$`)
-	TasksStarred = regexp.MustCompile(`^/tasks/starred/*$`)
+	TaskID = regexp.MustCompile(`^/task/([a-fA-F0-9\-]{36})$`)
+	Tasks  = regexp.MustCompile(`^/tasks/*$`)
 )
 
 type TaskHandler struct {
@@ -50,9 +49,6 @@ func (t *TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodGet && Tasks.MatchString(r.URL.Path):
 		t.GetTasks(w, r, *userId)
 		return
-	case r.Method == http.MethodGet && TasksStarred.MatchString(r.URL.Path):
-		t.GetStarredTasks(w, r, *userId)
-		return
 	default:
 		return
 	}
@@ -60,24 +56,6 @@ func (t *TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (t *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
 	tasks, err := t.DBService.GetTasks(userId)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
-	tasksJson, err := json.Marshal(tasks)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(tasksJson)
-}
-
-func (t *TaskHandler) GetStarredTasks(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
-	tasks, err := t.DBService.GetStarredTasks(userId)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
