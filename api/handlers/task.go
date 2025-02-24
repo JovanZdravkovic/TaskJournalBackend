@@ -38,7 +38,7 @@ func (t *TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		t.GetTask(w, r, *userId)
 		return
 	case r.Method == http.MethodPut && TaskID.MatchString(r.URL.Path):
-		t.UpdateTask(w, r)
+		t.CompleteTask(w, r, *userId)
 		return
 	case r.Method == http.MethodDelete && TaskID.MatchString(r.URL.Path):
 		t.DeleteTask(w, r)
@@ -122,9 +122,28 @@ func (t *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request, userId 
 	w.Write(taskIdJson)
 }
 
-func (t *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
+func (t *TaskHandler) CompleteTask(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
+	taskId, err := uuid.Parse(path.Base(r.URL.Path))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("error proccessing the uuid"))
+		return
+	}
+	_, err = t.DBService.CompleteTask(taskId, userId)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	responseJson, err := json.Marshal(db.Success{Success: true})
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("This is update single task endpoint"))
+	w.Write(responseJson)
 }
 
 func (t *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {

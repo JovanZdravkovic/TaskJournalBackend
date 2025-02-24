@@ -72,3 +72,7 @@ type TaskPost struct {
 type Id struct {
 	Id uuid.UUID `json:"id"`
 }
+
+type Success struct {
+	Success bool `json:"success"`
+}

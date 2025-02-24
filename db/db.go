@@ -35,7 +35,7 @@ func MatchPassword(password, hash string) bool {
 // TASKS
 
 func (dbService *DatabaseService) GetTasks(userId uuid.UUID) ([]TaskDB, error) {
-	rows, err := dbService.pool.Query(context.Background(), "SELECT t.* FROM task t WHERE t.created_by = $1", userId)
+	rows, err := dbService.pool.Query(context.Background(), "SELECT t.* FROM task t WHERE t.created_by = $1 AND t.exec_status = 'ACTIVE'", userId)
 	if err != nil {
 		return nil, errors.New("error while getting tasks from database")
 	} else {
@@ -105,7 +105,41 @@ func (dbService *DatabaseService) CreateTask(task TaskPost) (*uuid.UUID, error) 
 }
 
 // // TODO: Updating a single task will have multiple functions for different kinds of updates
-// func (dbService *DatabaseService) PutTask() (string, error) {}
+func (dbService *DatabaseService) CompleteTask(taskId uuid.UUID, userId uuid.UUID) (bool, error) {
+	tx, err := dbService.pool.BeginTx(context.Background(), pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(context.Background())
+
+	var owner uuid.UUID
+	var execStatus string
+	err = tx.QueryRow(context.Background(), "SELECT created_by, exec_status FROM task WHERE id = $1", taskId).Scan(&owner, &execStatus)
+	if err != nil {
+		return false, err
+	}
+
+	if (owner != userId) || execStatus != "ACTIVE" {
+		return false, errors.New("invalid request")
+	}
+
+	_, err = tx.Exec(context.Background(), "UPDATE task SET exec_status = 'INACTIVE' WHERE id = $1", taskId)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = tx.Exec(context.Background(), "INSERT INTO task_history(task_id) VALUES ($1)", taskId)
+	if err != nil {
+		return false, err
+	}
+
+	err = tx.Commit(context.Background())
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
 
 // func (dbService *DatabaseService) DeleteTask() (string, error) {}
 
