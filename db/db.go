@@ -89,13 +89,12 @@ func (dbService *DatabaseService) CreateTask(task TaskPost) (*uuid.UUID, error) 
 	var taskId uuid.UUID
 	err := dbService.pool.QueryRow(
 		context.Background(),
-		"INSERT INTO task(task_name, task_icon, task_desc, deadline, starred, exec_status, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+		"INSERT INTO task(task_name, task_icon, task_desc, deadline, starred, exec_status, created_by) VALUES ($1, $2, $3, $4, $5, 'ACTIVE', $6) RETURNING id",
 		task.TaskName,
 		task.TaskIcon,
 		task.TaskDesc,
 		task.Deadline,
 		task.Starred,
-		task.ExecStatus,
 		task.CreatedBy,
 	).Scan(&taskId)
 	if err != nil {

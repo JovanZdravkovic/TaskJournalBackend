@@ -60,13 +60,12 @@ type UserGet struct {
 }
 
 type TaskPost struct {
-	TaskName   string     `json:"taskName"`
-	TaskIcon   string     `json:"taskIcon"`
-	TaskDesc   string     `json:"taskDesc"`
-	Deadline   *time.Time `json:"deadline"`
-	Starred    bool       `json:"starred"`
-	ExecStatus string     `json:"execStatus"`
-	CreatedBy  uuid.UUID  `json:"createdBy"`
+	TaskName  string     `json:"taskName"`
+	TaskIcon  string     `json:"taskIcon"`
+	TaskDesc  string     `json:"taskDesc"`
+	Deadline  *time.Time `json:"deadline"`
+	Starred   bool       `json:"starred"`
+	CreatedBy uuid.UUID  `json:"createdBy"`
 }
 
 type Id struct {
