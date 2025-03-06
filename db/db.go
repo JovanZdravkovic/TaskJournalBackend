@@ -32,7 +32,7 @@ func MatchPassword(password, hash string) bool {
 	return err == nil
 }
 
-// TASKS
+// TASK
 
 func (dbService *DatabaseService) GetTasks(userId uuid.UUID) ([]TaskDB, error) {
 	rows, err := dbService.pool.Query(context.Background(), "SELECT t.* FROM task t WHERE t.created_by = $1 AND t.exec_status = 'ACTIVE'", userId)
@@ -103,7 +103,6 @@ func (dbService *DatabaseService) CreateTask(task TaskPost) (*uuid.UUID, error) 
 	return &taskId, nil
 }
 
-// // TODO: Updating a single task will have multiple functions for different kinds of updates
 func (dbService *DatabaseService) CompleteTask(taskId uuid.UUID, userId uuid.UUID) (bool, error) {
 	tx, err := dbService.pool.BeginTx(context.Background(), pgx.TxOptions{IsoLevel: pgx.Serializable})
 	if err != nil {
@@ -140,7 +139,37 @@ func (dbService *DatabaseService) CompleteTask(taskId uuid.UUID, userId uuid.UUI
 	return true, nil
 }
 
-// func (dbService *DatabaseService) DeleteTask() (string, error) {}
+func (dbService *DatabaseService) UpdateTask(taskId uuid.UUID, task TaskPut, userId uuid.UUID) error {
+	cmdTag, err := dbService.pool.Exec(
+		context.Background(),
+		"UPDATE task SET task_name = $1, task_icon = $2, task_desc = $3, starred = $4, deadline = $5 WHERE id = $6 AND created_by = $7",
+		task.TaskName,
+		task.TaskIcon,
+		task.TaskDesc,
+		task.Starred,
+		task.Deadline,
+		taskId,
+		userId,
+	)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return errors.New("task doesn't exist")
+	}
+	return nil
+}
+
+func (dbService *DatabaseService) DeleteTask(taskId uuid.UUID, userId uuid.UUID) error {
+	cmdTag, err := dbService.pool.Exec(context.Background(), "DELETE FROM task t WHERE t.id = $1 AND t.created_by = $2", taskId, userId)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return errors.New("task doesn't exist")
+	}
+	return nil
+}
 
 // AUTH
 
@@ -203,7 +232,7 @@ func (dbService *DatabaseService) InvalidateToken(tokenId uuid.UUID) {
 	log.Printf("%v", cmdTag)
 }
 
-// USERS
+// USER
 
 func (dbService *DatabaseService) GetUserInfo(userId uuid.UUID) (*UserGet, error) {
 	var user UserGet

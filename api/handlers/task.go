@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	TaskID = regexp.MustCompile(`^/task/([a-fA-F0-9\-]{36})$`)
-	Tasks  = regexp.MustCompile(`^/tasks/*$`)
+	TaskID       = regexp.MustCompile(`^/task/([a-fA-F0-9\-]{36})$`)
+	TaskUpdateID = regexp.MustCompile(`^/task/update/([a-fA-F0-9\-]{36})$`)
+	Tasks        = regexp.MustCompile(`^/tasks/*$`)
 )
 
 type TaskHandler struct {
@@ -40,8 +41,11 @@ func (t *TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodPut && TaskID.MatchString(r.URL.Path):
 		t.CompleteTask(w, r, *userId)
 		return
+	case r.Method == http.MethodPut && TaskUpdateID.MatchString(r.URL.Path):
+		t.UpdateTask(w, r, *userId)
+		return
 	case r.Method == http.MethodDelete && TaskID.MatchString(r.URL.Path):
-		t.DeleteTask(w, r)
+		t.DeleteTask(w, r, *userId)
 		return
 	case r.Method == http.MethodPost && Tasks.MatchString(r.URL.Path):
 		t.CreateTask(w, r, *userId)
@@ -146,7 +150,57 @@ func (t *TaskHandler) CompleteTask(w http.ResponseWriter, r *http.Request, userI
 	w.Write(responseJson)
 }
 
-func (t *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
+func (t *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
+	taskId, err := uuid.Parse(path.Base(r.URL.Path))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("error proccessing the uuid"))
+		return
+	}
+	var task db.TaskPut
+	err = json.NewDecoder(r.Body).Decode(&task)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("bad request"))
+		return
+	}
+	err = t.DBService.UpdateTask(taskId, task, userId)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	responseJson, err := json.Marshal(db.Success{Success: true})
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("This is delete single task endpoint"))
+	w.Write(responseJson)
+}
+
+func (t *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
+	taskId, err := uuid.Parse(path.Base(r.URL.Path))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("error proccessing the uuid"))
+		return
+	}
+	err = t.DBService.DeleteTask(taskId, userId)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	responseJson, err := json.Marshal(db.Success{Success: true})
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(responseJson)
 }
