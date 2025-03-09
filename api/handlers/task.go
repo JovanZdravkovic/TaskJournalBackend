@@ -59,7 +59,10 @@ func (t *TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
-	tasks, err := t.DBService.GetTasks(userId)
+	searchName := r.URL.Query().Get("searchName")
+	searchIcons := r.URL.Query()["searchIcons"]
+	searchOrderBy := r.URL.Query().Get("searchOrderBy")
+	tasks, err := t.DBService.GetTasks(userId, &searchName, searchIcons, &searchOrderBy)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

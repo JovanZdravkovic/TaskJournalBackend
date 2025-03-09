@@ -16,6 +16,43 @@ type DatabaseService struct {
 	pool *pgxpool.Pool
 }
 
+// Maybe needed in future
+var icons [33]string = [33]string{
+	"job",
+	"doctor_appointment",
+	"mechanic",
+	"electrician",
+	"transport",
+	"cleaning",
+	"swimming",
+	"gym",
+	"basketball",
+	"football",
+	"american_football",
+	"volleyball",
+	"concert",
+	"movie",
+	"meeting",
+	"reading",
+	"writing",
+	"payment",
+	"message",
+	"photography",
+	"moving",
+	"running",
+	"drive",
+	"shopping",
+	"coffee",
+	"sailing",
+	"church",
+	"pets",
+	"plants",
+	"lunch",
+	"phone_call",
+	"computer",
+	"party",
+}
+
 func NewDatabaseService(dbPool *pgxpool.Pool) *DatabaseService {
 	return &DatabaseService{
 		pool: dbPool,
@@ -34,8 +71,31 @@ func MatchPassword(password, hash string) bool {
 
 // TASK
 
-func (dbService *DatabaseService) GetTasks(userId uuid.UUID) ([]TaskDB, error) {
-	rows, err := dbService.pool.Query(context.Background(), "SELECT t.* FROM task t WHERE t.created_by = $1 AND t.exec_status = 'ACTIVE'", userId)
+func (dbService *DatabaseService) GetTasks(userId uuid.UUID, searchName *string, searchIcons []string, searchOrderBy *string) ([]TaskDB, error) {
+	query := "SELECT t.* FROM task t WHERE t.created_by = @userId AND t.exec_status = 'ACTIVE'"
+	if len(searchIcons) > 0 && searchIcons[0] != "null" {
+		query += " AND t.task_icon = ANY(@searchIcons::text[])"
+	}
+	if searchName != nil && *searchName != "null" && *searchName != "" {
+		query += " AND t.task_name ILIKE concat('%', @searchName::text, '%')"
+	}
+	if searchOrderBy != nil {
+		if *searchOrderBy == "starred" {
+			query += " ORDER BY t.starred DESC"
+		} else if *searchOrderBy == "deadline" {
+			query += " ORDER BY t.deadline ASC"
+		}
+	}
+	rows, err := dbService.pool.Query(
+		context.Background(),
+		query,
+		pgx.NamedArgs{
+			"userId":        userId,
+			"searchName":    *searchName,
+			"searchIcons":   searchIcons,
+			"searchOrderBy": *searchOrderBy,
+		},
+	)
 	if err != nil {
 		return nil, errors.New("error while getting tasks from database")
 	} else {
