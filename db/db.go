@@ -233,7 +233,7 @@ func (dbService *DatabaseService) DeleteTask(taskId uuid.UUID, userId uuid.UUID)
 
 // TASK HISTORY
 
-func (dbService *DatabaseService) GetTasksHistory(userId uuid.UUID, searchName *string, searchIcons []string, searchRating *string) ([]TaskHistoryDB, error) {
+func (dbService *DatabaseService) GetTasksHistory(userId uuid.UUID, searchName *string, searchIcons []string, searchRating int) ([]TaskHistoryDB, error) {
 	query := "SELECT th.*, t.task_name, t.task_icon FROM task_history th JOIN task t ON th.task_id = t.id WHERE t.created_by = @userId"
 	if len(searchIcons) > 0 && searchIcons[0] != "null" {
 		query += " AND t.task_icon = ANY(@searchIcons::text[])"
@@ -241,8 +241,8 @@ func (dbService *DatabaseService) GetTasksHistory(userId uuid.UUID, searchName *
 	if searchName != nil && *searchName != "null" && *searchName != "" {
 		query += " AND t.task_name ILIKE concat('%', @searchName::text, '%')"
 	}
-	if searchRating != nil && *searchRating != "null" && *searchRating != "" {
-		query += " AND th.exec_rating = @searchRating::text"
+	if searchRating >= 1 && searchRating <= 3 {
+		query += " AND th.exec_rating = @searchRating::int"
 	}
 	rows, err := dbService.pool.Query(
 		context.Background(),
@@ -251,7 +251,7 @@ func (dbService *DatabaseService) GetTasksHistory(userId uuid.UUID, searchName *
 			"userId":       userId,
 			"searchName":   *searchName,
 			"searchIcons":  searchIcons,
-			"searchRating": *searchRating,
+			"searchRating": searchRating,
 		},
 	)
 	if err != nil {

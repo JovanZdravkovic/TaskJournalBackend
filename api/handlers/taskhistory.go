@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"regexp"
+	"strconv"
 
 	"github.com/JovanZdravkovic/TaskJournalBackend/db"
 	"github.com/google/uuid"
@@ -50,8 +51,12 @@ func (th *TaskHistoryHandler) GetTaskHistory(w http.ResponseWriter, r *http.Requ
 func (th *TaskHistoryHandler) GetTasksHistory(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
 	searchName := r.URL.Query().Get("searchName")
 	searchIcons := r.URL.Query()["searchIcons"]
-	searchRating := r.URL.Query().Get("searchRating")
-	tasksHistory, err := th.DBService.GetTasksHistory(userId, &searchName, searchIcons, &searchRating)
+	searchRatingString := r.URL.Query().Get("searchRating")
+	var searchRating int
+	if searchRatingString == "1" || searchRatingString == "2" || searchRatingString == "3" {
+		searchRating, _ = strconv.Atoi(searchRatingString)
+	}
+	tasksHistory, err := th.DBService.GetTasksHistory(userId, &searchName, searchIcons, searchRating)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
