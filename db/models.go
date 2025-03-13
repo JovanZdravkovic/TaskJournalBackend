@@ -26,6 +26,8 @@ type TaskHistoryDB struct {
 	ExecRating  *string   `json:"execRating"`
 	ExecComment *string   `json:"execComment"`
 	TaskId      uuid.UUID `json:"taskId"`
+	TaskName    string    `json:"taskName"`
+	TaskIcon    string    `json:"taskIcon"`
 }
 
 type UserDB struct {

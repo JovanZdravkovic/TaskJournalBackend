@@ -231,6 +231,52 @@ func (dbService *DatabaseService) DeleteTask(taskId uuid.UUID, userId uuid.UUID)
 	return nil
 }
 
+// TASK HISTORY
+
+func (dbService *DatabaseService) GetTasksHistory(userId uuid.UUID, searchName *string, searchIcons []string, searchRating *string) ([]TaskHistoryDB, error) {
+	query := "SELECT th.*, t.task_name, t.task_icon FROM task_history th JOIN task t ON th.task_id = t.id WHERE t.created_by = @userId"
+	if len(searchIcons) > 0 && searchIcons[0] != "null" {
+		query += " AND t.task_icon = ANY(@searchIcons::text[])"
+	}
+	if searchName != nil && *searchName != "null" && *searchName != "" {
+		query += " AND t.task_name ILIKE concat('%', @searchName::text, '%')"
+	}
+	if searchRating != nil && *searchRating != "null" && *searchRating != "" {
+		query += " AND th.exec_rating = @searchRating::text"
+	}
+	rows, err := dbService.pool.Query(
+		context.Background(),
+		query,
+		pgx.NamedArgs{
+			"userId":       userId,
+			"searchName":   *searchName,
+			"searchIcons":  searchIcons,
+			"searchRating": *searchRating,
+		},
+	)
+	if err != nil {
+		return nil, errors.New("error while getting tasks history from database")
+	} else {
+		var tasksHistory []TaskHistoryDB
+		for rows.Next() {
+			var taskHistory TaskHistoryDB
+			err := rows.Scan(
+				&taskHistory.Id,
+				&taskHistory.ExecRating,
+				&taskHistory.ExecComment,
+				&taskHistory.TaskId,
+				&taskHistory.TaskName,
+				&taskHistory.TaskIcon,
+			)
+			if err != nil {
+				return nil, errors.New("error while iterating dataset")
+			}
+			tasksHistory = append(tasksHistory, taskHistory)
+		}
+		return tasksHistory, nil
+	}
+}
+
 // AUTH
 
 func (dbService *DatabaseService) GetLoggedInUser(tokenId uuid.UUID) (*uuid.UUID, error) {
