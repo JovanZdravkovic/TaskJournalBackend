@@ -22,7 +22,7 @@ CREATE TABLE task(
     task_desc text NOT NULL,
     deadline timestamp(0) WITH TIME ZONE,
     starred boolean NOT NULL,
-    exec_status text NOT NUll,
+    exec_status int NOT NUll,
     created_at timestamp(0) WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     created_by uuid NOT NULL,
     CONSTRAINT pk_task_id PRIMARY KEY(id),
