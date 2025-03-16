@@ -30,6 +30,11 @@ type TaskHistoryDB struct {
 	TaskIcon    string    `json:"taskIcon"`
 }
 
+type TaskHistoryPut struct {
+	ExecRating  *string `json:"execRating"`
+	ExecComment *string `json:"execComment"`
+}
+
 type UserDB struct {
 	Id        uuid.UUID `json:"id"`
 	Username  string    `json:"username"`

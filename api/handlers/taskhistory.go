@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"path"
 	"regexp"
 	"strconv"
 
@@ -46,6 +47,27 @@ func (th *TaskHistoryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 }
 
 func (th *TaskHistoryHandler) GetTaskHistory(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
+	taskHistoryId, err := uuid.Parse(path.Base(r.URL.Path))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("error proccessing the uuid"))
+		return
+	}
+	taskHistory, err := th.DBService.GetTaskHistory(taskHistoryId, userId)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("task history with given id doesn't exist"))
+		return
+	}
+	taskHistoryJson, err := json.Marshal(taskHistory)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("internal server error occured"))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(taskHistoryJson)
 }
 
 func (th *TaskHistoryHandler) GetTasksHistory(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {

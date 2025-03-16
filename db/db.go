@@ -123,12 +123,8 @@ func (dbService *DatabaseService) GetTasks(userId uuid.UUID, searchName *string,
 }
 
 func (dbService *DatabaseService) GetTask(taskId uuid.UUID, userId uuid.UUID) (*TaskDB, error) {
-	row := dbService.pool.QueryRow(context.Background(), "SELECT t.* FROM task t WHERE t.id = $1 AND t.created_by = $2", taskId, userId)
-	if row == nil {
-		return nil, errors.New("task with given uuid doesnt exist")
-	}
 	var task TaskDB
-	err := row.Scan(
+	err := dbService.pool.QueryRow(context.Background(), "SELECT t.* FROM task t WHERE t.id = $1 AND t.created_by = $2", taskId, userId).Scan(
 		&task.Id,
 		&task.TaskName,
 		&task.TaskIcon,
@@ -140,7 +136,10 @@ func (dbService *DatabaseService) GetTask(taskId uuid.UUID, userId uuid.UUID) (*
 		&task.Created_by,
 	)
 	if err != nil {
-		return nil, errors.New("error while iterating dataset")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("task doesn't exist")
+		}
+		return nil, errors.New("unexpected error")
 	}
 	return &task, nil
 }
@@ -232,6 +231,26 @@ func (dbService *DatabaseService) DeleteTask(taskId uuid.UUID, userId uuid.UUID)
 }
 
 // TASK HISTORY
+
+func (dbService *DatabaseService) GetTaskHistory(taskHistoryId uuid.UUID, userId uuid.UUID) (*TaskHistoryDB, error) {
+	var taskHistory TaskHistoryDB
+	err := dbService.pool.QueryRow(context.Background(), "SELECT th.*, t.task_name, t.task_icon FROM task_history th JOIN task t ON th.task_id = t.id WHERE t.created_by = $1 AND th.id = $2", userId, taskHistoryId).
+		Scan(
+			&taskHistory.Id,
+			&taskHistory.ExecRating,
+			&taskHistory.ExecComment,
+			&taskHistory.TaskId,
+			&taskHistory.TaskName,
+			&taskHistory.TaskIcon,
+		)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("task history doesn't exist")
+		}
+		return nil, errors.New("unexpected error")
+	}
+	return &taskHistory, nil
+}
 
 func (dbService *DatabaseService) GetTasksHistory(userId uuid.UUID, searchName *string, searchIcons []string, searchRating int) ([]TaskHistoryDB, error) {
 	query := "SELECT th.*, t.task_name, t.task_icon FROM task_history th JOIN task t ON th.task_id = t.id WHERE t.created_by = @userId"
