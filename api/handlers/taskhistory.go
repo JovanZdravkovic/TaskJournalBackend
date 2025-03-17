@@ -41,6 +41,9 @@ func (th *TaskHistoryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	case r.Method == http.MethodGet && TasksHistory.MatchString(r.URL.Path):
 		th.GetTasksHistory(w, r, *userId)
 		return
+	case r.Method == http.MethodPut && TaskHistoryID.MatchString(r.URL.Path):
+		th.UpdateTaskHistory(w, r, *userId)
+		return
 	default:
 		return
 	}
@@ -93,4 +96,35 @@ func (th *TaskHistoryHandler) GetTasksHistory(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(tasksHistoryJson)
+}
+
+func (th *TaskHistoryHandler) UpdateTaskHistory(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
+	taskId, err := uuid.Parse(path.Base(r.URL.Path))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("error proccessing the uuid"))
+		return
+	}
+	var taskHistory db.TaskHistoryPut
+	err = json.NewDecoder(r.Body).Decode(&taskHistory)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("bad request"))
+		return
+	}
+	err = th.DBService.UpdateTaskHistory(taskId, taskHistory, userId)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	responseJson, err := json.Marshal(db.Success{Success: true})
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(responseJson)
 }

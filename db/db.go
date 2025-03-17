@@ -296,6 +296,44 @@ func (dbService *DatabaseService) GetTasksHistory(userId uuid.UUID, searchName *
 	}
 }
 
+func (dbService *DatabaseService) UpdateTaskHistory(taskHistoryId uuid.UUID, taskHistory TaskHistoryPut, userId uuid.UUID) error {
+	tx, err := dbService.pool.BeginTx(context.Background(), pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(context.Background())
+
+	var tmpvar int
+	err = tx.QueryRow(context.Background(), "SELECT 1 FROM task_history th JOIN task t ON th.task_id = t.id WHERE t.created_by = $1 AND th.id = $2", userId, taskHistoryId).Scan(&tmpvar)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New("task history doesn't exist")
+		}
+		return errors.New("unexpected error")
+	}
+
+	cmdTag, err := tx.Exec(
+		context.Background(),
+		"UPDATE task_history SET exec_comment = $1, exec_rating = $2 WHERE id = $3",
+		taskHistory.ExecComment,
+		taskHistory.ExecRating,
+		taskHistoryId,
+	)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return errors.New("error while updating")
+	}
+
+	err = tx.Commit(context.Background())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // AUTH
 
 func (dbService *DatabaseService) GetLoggedInUser(tokenId uuid.UUID) (*uuid.UUID, error) {

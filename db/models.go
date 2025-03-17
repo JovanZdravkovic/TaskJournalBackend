@@ -23,7 +23,7 @@ type TaskDB struct {
 
 type TaskHistoryDB struct {
 	Id          uuid.UUID `json:"id"`
-	ExecRating  *string   `json:"execRating"`
+	ExecRating  *int      `json:"execRating"`
 	ExecComment *string   `json:"execComment"`
 	TaskId      uuid.UUID `json:"taskId"`
 	TaskName    string    `json:"taskName"`
@@ -31,7 +31,7 @@ type TaskHistoryDB struct {
 }
 
 type TaskHistoryPut struct {
-	ExecRating  *string `json:"execRating"`
+	ExecRating  *int    `json:"execRating"`
 	ExecComment *string `json:"execComment"`
 }
 
