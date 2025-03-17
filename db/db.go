@@ -297,33 +297,61 @@ func (dbService *DatabaseService) GetTasksHistory(userId uuid.UUID, searchName *
 }
 
 func (dbService *DatabaseService) UpdateTaskHistory(taskHistoryId uuid.UUID, taskHistory TaskHistoryPut, userId uuid.UUID) error {
-	tx, err := dbService.pool.BeginTx(context.Background(), pgx.TxOptions{IsoLevel: pgx.Serializable})
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(context.Background())
-
-	var tmpvar int
-	err = tx.QueryRow(context.Background(), "SELECT 1 FROM task_history th JOIN task t ON th.task_id = t.id WHERE t.created_by = $1 AND th.id = $2", userId, taskHistoryId).Scan(&tmpvar)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errors.New("task history doesn't exist")
-		}
-		return errors.New("unexpected error")
-	}
-
-	cmdTag, err := tx.Exec(
+	cmdTag, err := dbService.pool.Exec(
 		context.Background(),
-		"UPDATE task_history SET exec_comment = $1, exec_rating = $2 WHERE id = $3",
+		"UPDATE task_history SET exec_comment = $1, exec_rating = $2 WHERE id = $3 AND EXISTS (SELECT 1 FROM task t WHERE t.created_by = $4 AND t.id = task_id)",
 		taskHistory.ExecComment,
 		taskHistory.ExecRating,
 		taskHistoryId,
+		userId,
 	)
 	if err != nil {
 		return err
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return errors.New("error while updating")
+	}
+	return nil
+}
+
+func (dbService *DatabaseService) DeleteTaskAndHistory(taskHistoryId uuid.UUID, userId uuid.UUID) error {
+	tx, err := dbService.pool.BeginTx(context.Background(), pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(context.Background())
+
+	var taskId uuid.UUID
+	err = tx.QueryRow(context.Background(), "SELECT t.id FROM task t JOIN task_history th ON t.id = th.task_id WHERE th.id = $1 AND t.created_by = $2", taskHistoryId, userId).Scan(&taskId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New("task doesn't exist")
+		}
+		return errors.New("unexpected error")
+	}
+
+	cmdTag, err := tx.Exec(
+		context.Background(),
+		"DELETE FROM task_history WHERE id = $1",
+		taskHistoryId,
+	)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return errors.New("error while deleting task history")
+	}
+
+	cmdTag, err = tx.Exec(
+		context.Background(),
+		"DELETE FROM task WHERE id = $1",
+		taskId,
+	)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return errors.New("error while deleting task")
 	}
 
 	err = tx.Commit(context.Background())
