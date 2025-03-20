@@ -66,6 +66,11 @@ type UserGet struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+type UserPut struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+}
+
 type TaskPost struct {
 	TaskName  string     `json:"taskName"`
 	TaskIcon  string     `json:"taskIcon"`

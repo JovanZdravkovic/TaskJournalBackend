@@ -427,7 +427,7 @@ func (dbService *DatabaseService) InvalidateToken(tokenId uuid.UUID) {
 
 func (dbService *DatabaseService) GetUserInfo(userId uuid.UUID) (*UserGet, error) {
 	var user UserGet
-	err := dbService.pool.QueryRow(context.Background(), "SELECT u.username, u.email. u.created_at FROM \"user\" u WHERE u.id = $1", userId).Scan(
+	err := dbService.pool.QueryRow(context.Background(), "SELECT u.username, u.email, u.created_at FROM \"user\" u WHERE u.id = $1", userId).Scan(
 		&user.Username,
 		&user.Email,
 		&user.CreatedAt,
@@ -439,6 +439,23 @@ func (dbService *DatabaseService) GetUserInfo(userId uuid.UUID) (*UserGet, error
 		return nil, errors.New("unexpected error")
 	}
 	return &user, nil
+}
+
+func (dbService *DatabaseService) UpdateUser(user UserPut, userId uuid.UUID) error {
+	cmdTag, err := dbService.pool.Exec(
+		context.Background(),
+		"UPDATE \"user\" SET username = $1, email = $2 WHERE id = $3",
+		user.Username,
+		user.Email,
+		userId,
+	)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return errors.New("error while updating user")
+	}
+	return nil
 }
 
 func (dbService *DatabaseService) CreateUser(user UserPost) (*uuid.UUID, error) {
