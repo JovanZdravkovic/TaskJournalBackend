@@ -24,8 +24,7 @@ const iconUploadDirectory = "uploads/profile_icons"
 const maxIconSize = 500000
 
 type UserHandler struct {
-	DBService   *db.DatabaseService
-	AuthService *AuthHandler
+	DBService *db.DatabaseService
 }
 
 func (u *UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -34,42 +33,29 @@ func (u *UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId, err := u.AuthService.GetUser(r)
+	tokenString := r.Header.Get("X-Auth-Token")
+	if tokenString == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	token, err := uuid.Parse(tokenString)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	switch {
 	case r.Method == http.MethodGet && Users.MatchString(r.URL.Path):
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		u.GetUser(w, r, *userId)
-		return
-	case r.Method == http.MethodPost && Users.MatchString(r.URL.Path):
-		u.CreateUser(w, r)
+		u.GetUser(w, r, token)
 		return
 	case r.Method == http.MethodPut && Users.MatchString(r.URL.Path):
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		u.UpdateUser(w, r, *userId)
+		u.UpdateUser(w, r, token)
 		return
 	case r.Method == http.MethodGet && UserIcon.MatchString(r.URL.Path):
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		u.GetIcon(w, r, *userId)
+		u.GetIcon(w, r, token)
 		return
 	case r.Method == http.MethodPost && UserIcon.MatchString(r.URL.Path):
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		u.UploadIcon(w, r, *userId)
+		u.UploadIcon(w, r, token)
 		return
 	default:
 		return
@@ -92,31 +78,6 @@ func (u *UserHandler) GetUser(w http.ResponseWriter, r *http.Request, userId uui
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(userJson)
-}
-
-func (u *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	var user db.UserPost
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("bad request"))
-		return
-	}
-	userId, err := u.DBService.CreateUser(user)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
-	userIdJson, err := json.Marshal(db.Id{Id: *userId})
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("error while constructing json"))
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(userIdJson)
 }
 
 func (u *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {

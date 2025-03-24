@@ -17,8 +17,7 @@ var (
 )
 
 type TaskHandler struct {
-	DBService   *db.DatabaseService
-	AuthService *AuthHandler
+	DBService *db.DatabaseService
 }
 
 func (t *TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -27,31 +26,35 @@ func (t *TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId, err := t.AuthService.GetUser(r)
+	tokenString := r.Header.Get("X-Auth-Token")
+	if tokenString == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	token, err := uuid.Parse(tokenString)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(err.Error()))
 		return
 	}
 
 	switch {
 	case r.Method == http.MethodGet && TaskID.MatchString(r.URL.Path):
-		t.GetTask(w, r, *userId)
+		t.GetTask(w, r, token)
 		return
 	case r.Method == http.MethodPut && TaskID.MatchString(r.URL.Path):
-		t.CompleteTask(w, r, *userId)
+		t.CompleteTask(w, r, token)
 		return
 	case r.Method == http.MethodPut && TaskUpdateID.MatchString(r.URL.Path):
-		t.UpdateTask(w, r, *userId)
+		t.UpdateTask(w, r, token)
 		return
 	case r.Method == http.MethodDelete && TaskID.MatchString(r.URL.Path):
-		t.DeleteTask(w, r, *userId)
+		t.DeleteTask(w, r, token)
 		return
 	case r.Method == http.MethodPost && Tasks.MatchString(r.URL.Path):
-		t.CreateTask(w, r, *userId)
+		t.CreateTask(w, r, token)
 		return
 	case r.Method == http.MethodGet && Tasks.MatchString(r.URL.Path):
-		t.GetTasks(w, r, *userId)
+		t.GetTasks(w, r, token)
 		return
 	default:
 		return

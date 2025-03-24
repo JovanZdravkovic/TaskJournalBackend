@@ -371,7 +371,7 @@ func (dbService *DatabaseService) GetLoggedInUser(tokenId uuid.UUID) (*uuid.UUID
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("invalid token")
 		}
-		return nil, errors.New("unexpected error")
+		return nil, err
 	}
 	return &userId, nil
 }

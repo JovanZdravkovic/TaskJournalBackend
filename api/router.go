@@ -22,22 +22,31 @@ func NewRouter(address string) *Router {
 func (r *Router) ConfigureRoutes(dbService *db.DatabaseService) {
 	homeHandler := handlers.HomeHandler{}
 	authHandler := handlers.AuthHandler{DBService: dbService}
-	taskHandler := handlers.TaskHandler{DBService: dbService, AuthService: &authHandler}
-	taskHistoryHandler := handlers.TaskHistoryHandler{DBService: dbService, AuthService: &authHandler}
-	userHandler := handlers.UserHandler{DBService: dbService, AuthService: &authHandler}
+	taskHandler := handlers.TaskHandler{DBService: dbService}
+	taskHistoryHandler := handlers.TaskHistoryHandler{DBService: dbService}
+	userHandler := handlers.UserHandler{DBService: dbService}
+	loginHandler := handlers.LoginHandler{DBService: dbService}
+	logoutHandler := handlers.LogoutHandler{DBService: dbService}
+	signupHandler := handlers.SignupHandler{DBService: dbService}
 	r.mux.Handle("/", &homeHandler)
-	r.mux.Handle("/task", &taskHandler)
-	r.mux.Handle("/task/", &taskHandler)
-	r.mux.Handle("/tasks", &taskHandler)
-	r.mux.Handle("/tasks/", &taskHandler)
-	r.mux.Handle("/task_history", &taskHistoryHandler)
-	r.mux.Handle("/task_history/", &taskHistoryHandler)
-	r.mux.Handle("/tasks_history", &taskHistoryHandler)
-	r.mux.Handle("/tasks_history/", &taskHistoryHandler)
-	r.mux.Handle("/user", &userHandler)
-	r.mux.Handle("/user/", &userHandler)
-	r.mux.Handle("/auth", &authHandler)
-	r.mux.Handle("/auth/", &authHandler)
+	r.mux.Handle("/task", handlers.AuthMiddleware(&taskHandler, *dbService))
+	r.mux.Handle("/task/", handlers.AuthMiddleware(&taskHandler, *dbService))
+	r.mux.Handle("/tasks", handlers.AuthMiddleware(&taskHandler, *dbService))
+	r.mux.Handle("/tasks/", handlers.AuthMiddleware(&taskHandler, *dbService))
+	r.mux.Handle("/task_history", handlers.AuthMiddleware(&taskHistoryHandler, *dbService))
+	r.mux.Handle("/task_history/", handlers.AuthMiddleware(&taskHistoryHandler, *dbService))
+	r.mux.Handle("/tasks_history", handlers.AuthMiddleware(&taskHistoryHandler, *dbService))
+	r.mux.Handle("/tasks_history/", handlers.AuthMiddleware(&taskHistoryHandler, *dbService))
+	r.mux.Handle("/user", handlers.AuthMiddleware(&userHandler, *dbService))
+	r.mux.Handle("/user/", handlers.AuthMiddleware(&userHandler, *dbService))
+	r.mux.Handle("/auth", handlers.AuthMiddleware(&authHandler, *dbService))
+	r.mux.Handle("/auth/", handlers.AuthMiddleware(&authHandler, *dbService))
+	r.mux.Handle("/login", &loginHandler)
+	r.mux.Handle("/login/", &loginHandler)
+	r.mux.Handle("/logout", &logoutHandler)
+	r.mux.Handle("/logout/", &logoutHandler)
+	r.mux.Handle("/signup", &signupHandler)
+	r.mux.Handle("/signup/", &signupHandler)
 }
 
 func (r *Router) ListenAndServe() {
