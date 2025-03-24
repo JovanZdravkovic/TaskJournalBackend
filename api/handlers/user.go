@@ -192,5 +192,6 @@ func (u *UserHandler) GetIcon(w http.ResponseWriter, r *http.Request, userId uui
 		return
 	}
 
+	w.Header().Set("Cache-Control", "no-store, must-revalidate")
 	http.ServeFile(w, r, filePath)
 }
