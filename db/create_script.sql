@@ -1,7 +1,7 @@
 CREATE TABLE "user"(
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    username text NOT NULL,
-    email text NOT NULL,
+    username text NOT NULL UNIQUE,
+    email text NOT NULL UNIQUE,
     "password" text NOT NULL,
     created_at timestamp(0) WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT pk_user_id PRIMARY KEY(id)
