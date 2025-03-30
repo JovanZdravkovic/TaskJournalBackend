@@ -22,7 +22,7 @@ CREATE TABLE task(
     task_desc text NOT NULL,
     deadline timestamp(0) WITH TIME ZONE,
     starred boolean NOT NULL,
-    exec_status int NOT NUll,
+    exec_status text NOT NUll,
     created_at timestamp(0) WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     created_by uuid NOT NULL,
     CONSTRAINT pk_task_id PRIMARY KEY(id),
@@ -31,7 +31,7 @@ CREATE TABLE task(
 
 CREATE TABLE task_history(
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    exec_rating text,
+    exec_rating int,
     exec_comment text,
     task_id uuid NOT NULL,
     CONSTRAINT pk_task_history_id PRIMARY KEY(id),
