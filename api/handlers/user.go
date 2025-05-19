@@ -122,9 +122,9 @@ func (u *UserHandler) UploadIcon(w http.ResponseWriter, r *http.Request, userId 
 	defer file.Close()
 
 	contentType := handler.Header.Get("Content-Type")
-	if contentType != "image/jpeg" && contentType != "image/jpg" {
+	if contentType != "image/jpeg" && contentType != "image/jpg" && contentType != "image/png" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("File is not jpeg format"))
+		w.Write([]byte("File is not jpeg or png format"))
 		return
 	}
 
