@@ -23,7 +23,7 @@ Task Journal offers the following features:
 # TaskJournalBackend
 
 **TaskJournalBackend** is the repository for the backend REST api of Task Journal application.  
-The backend api is written in Golang, primarily utilizing standard library and pgx library for database connection.
+The backend api is written in Golang, primarily utilizing the Go standard library and pgx library for database connection.
 The latest production version (main branch) is hosted on [taskjournal.online/api](https://taskjournal.online/api).
 
 ## Installation and requirements
