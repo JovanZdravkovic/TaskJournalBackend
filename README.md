@@ -40,7 +40,7 @@ The app establishes a connection via database connection string url, with the fo
 - YourUserName represents database user name
 - YourPassword represents password for the given database user
 - YourHostName represents url where database is hosted (usually localhost)
-- :5432 is simply the standard opened port for connection in PostgreSQL
+- :5432 is the standard opened port for connections in PostgreSQL
 - YourDatabaseName represents the name of the database
 
 Database connection string should be set as an environment variable on the system.
