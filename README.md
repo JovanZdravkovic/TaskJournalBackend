@@ -53,5 +53,7 @@ Before running the app, ensure that all required database tables are created by 
 
 ### Running the backend application
 
-To run the backend app, use the following command: `go run main.go`. It will automatically verify and install any required dependencies if they are missing.
+To run the app, use the following command: `go run main.go`.
+This will start the backend server on `localhost:8080`.
+It will also automatically verify and install any required dependencies if they are missing.
 
